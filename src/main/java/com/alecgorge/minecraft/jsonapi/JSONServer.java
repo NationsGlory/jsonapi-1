@@ -86,7 +86,7 @@ public class JSONServer extends NanoHTTPD {
 					}
 				}
 				
-				String[] methodsFiles = new String[] { "chat.json", "dynmap.json", "econ.json", "fs.json", "permissions.json",
+				String[] methodsFiles = new String[] { "chat.json", "dynmap.json", "econ.json", "permissions.json",
 													   "players.json", "plugins.json", "remotetoolkit.json", "server.json",
 													   "streams.json", "system.json", "worlds.json", "jsonapi.json" };
 				
