@@ -1,12 +1,15 @@
 package com.alecgorge.minecraft.jsonapi;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import com.alecgorge.java.http.MutableHttpRequest;
+import com.alecgorge.minecraft.jsonapi.config.UsersConfig;
+import com.alecgorge.minecraft.jsonapi.dynamic.APIWrapperMethods;
+import com.alecgorge.minecraft.jsonapi.dynamic.Caller;
+import com.alecgorge.minecraft.jsonapi.streams.*;
+import org.json.simpleForBukkit.JSONArray;
+import org.json.simpleForBukkit.JSONObject;
+import org.json.simpleForBukkit.parser.JSONParser;
+
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -14,25 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
-
-import org.json.simpleForBukkit.JSONArray;
-import org.json.simpleForBukkit.JSONObject;
-import org.json.simpleForBukkit.parser.JSONParser;
-import org.json.simpleForBukkit.parser.ParseException;
-
-import com.alecgorge.java.http.MutableHttpRequest;
-import com.alecgorge.minecraft.jsonapi.api.v2.APIv2Handler;
-import com.alecgorge.minecraft.jsonapi.config.UsersConfig;
-import com.alecgorge.minecraft.jsonapi.dynamic.APIWrapperMethods;
-import com.alecgorge.minecraft.jsonapi.dynamic.Caller;
-import com.alecgorge.minecraft.jsonapi.streams.ChatMessage;
-import com.alecgorge.minecraft.jsonapi.streams.ChatStream;
-import com.alecgorge.minecraft.jsonapi.streams.ConnectionMessage;
-import com.alecgorge.minecraft.jsonapi.streams.ConnectionStream;
-import com.alecgorge.minecraft.jsonapi.streams.ConsoleMessage;
-import com.alecgorge.minecraft.jsonapi.streams.ConsoleStream;
-import com.alecgorge.minecraft.jsonapi.streams.PerformanceStream;
-import com.alecgorge.minecraft.jsonapi.streams.StreamingResponse;
 
 public class JSONServer extends NanoHTTPD {
 	public UsersConfig logins;
@@ -251,59 +235,7 @@ public class JSONServer extends NanoHTTPD {
 			return jsonRespone(returnAPIError("", "You are not allowed to make API calls."), callback, HTTP_FORBIDDEN);
 		}
 
-		if (uri.equals("/api/subscribe")) {
-			String source = parms.getProperty("source");
-			String sources = parms.getProperty("sources");
-			String key = parms.getProperty("key");
-
-			Object prev = parms.getProperty("show_previous");
-			boolean showOlder;
-			if (prev == null) {
-				showOlder = true;
-			} else {
-				if (prev.equals("false")) {
-					showOlder = false;
-				} else {
-					showOlder = true;
-				}
-			}
-
-			List<String> sourceList = new ArrayList<String>();
-			if (source != null) {
-				if (!testLogin(source, key)) {
-					info("[Streaming API] " + header.get("X-REMOTE-ADDR") + ": Invalid API Key.");
-					return jsonRespone(returnAPIError(source, "Invalid API key."), callback, HTTP_FORBIDDEN);
-				}
-
-				if (source.equals("all")) {
-					sourceList = new ArrayList<String>(JSONAPI.instance.getStreamManager().getStreams().keySet());
-				} else {
-					sourceList.add(source);
-				}
-			} else if (sources != null) {
-				if (!testLogin(sources, key)) {
-					info("[Streaming API] " + header.get("X-REMOTE-ADDR") + ": Invalid API Key.");
-					return jsonRespone(returnAPIError(source, "Invalid API key."), callback, HTTP_FORBIDDEN);
-				}
-				JSONParser p = new JSONParser();
-				try {
-					for (Object o : (JSONArray) p.parse(sources)) {
-						sourceList.add(o.toString());
-					}
-				} catch (ParseException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
-			}
-
-			info("[Streaming API] " + header.get("X-REMOTE-ADDR") + ": source=" + sourceList.toString());
-			StreamingResponse out = new StreamingResponse(inst, sourceList, callback, showOlder, parms.containsKey("tag") ? parms.getProperty("tag") : null);
-
-			Response r = new NanoHTTPD.Response(HTTP_OK, MIME_PLAINTEXT, out);
-			r.addHeader("Access-Control-Allow-Origin", "*");
-			return r;
-		} else if (!uri.equals("/api/call") && !uri.equals("/api/call-multiple")) {
+		if (!uri.equals("/api/call") && !uri.equals("/api/call-multiple")) {
 			Response r = new NanoHTTPD.Response(HTTP_NOTFOUND, MIME_PLAINTEXT, "File not found.");
 			r.addHeader("Access-Control-Allow-Origin", "*");
 			return r;
