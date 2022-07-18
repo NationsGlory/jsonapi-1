@@ -1,28 +1,20 @@
 package com.alecgorge.minecraft.jsonapi.dynamic;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Logger;
-
+import com.alecgorge.minecraft.jsonapi.APIException;
+import com.alecgorge.minecraft.jsonapi.JSONAPI;
+import com.alecgorge.minecraft.jsonapi.McRKit.api.RTKInterface.CommandType;
+import com.alecgorge.minecraft.jsonapi.McRKit.api.RTKInterfaceException;
+import com.alecgorge.minecraft.jsonapi.api.BukGetAPIMethods;
+import com.alecgorge.minecraft.jsonapi.api.JSONAPIAPIMethods;
+import com.alecgorge.minecraft.jsonapi.api.JSONAPIStreamMessage;
+import com.alecgorge.minecraft.jsonapi.chat.BukkitForgeRealisticChat;
+import com.alecgorge.minecraft.jsonapi.chat.BukkitRealisticChat;
+import com.alecgorge.minecraft.jsonapi.chat.IRealisticChat;
+import com.alecgorge.minecraft.jsonapi.util.RecursiveDirLister;
+import com.alecgorge.minecraft.permissions.PermissionWrapper;
 import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.economy.Economy;
-
-import org.bukkit.Bukkit;
-import org.bukkit.Difficulty;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.Server;
+import org.bukkit.*;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.block.Sign;
@@ -34,22 +26,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.RegisteredServiceProvider;
-import org.java_websocket.util.Base64;
 import org.json.simpleForBukkit.JSONObject;
 
-import com.alecgorge.minecraft.jsonapi.APIException;
-import com.alecgorge.minecraft.jsonapi.JSONAPI;
-import com.alecgorge.minecraft.jsonapi.McRKit.api.RTKInterface.CommandType;
-import com.alecgorge.minecraft.jsonapi.McRKit.api.RTKInterfaceException;
-import com.alecgorge.minecraft.jsonapi.api.BukGetAPIMethods;
-import com.alecgorge.minecraft.jsonapi.api.JSONAPIAPIMethods;
-import com.alecgorge.minecraft.jsonapi.api.JSONAPIStreamMessage;
-import com.alecgorge.minecraft.jsonapi.chat.BukkitForgeRealisticChat;
-import com.alecgorge.minecraft.jsonapi.chat.BukkitRealisticChat;
-import com.alecgorge.minecraft.jsonapi.chat.IRealisticChat;
-import com.alecgorge.minecraft.jsonapi.util.PropertiesFile;
-import com.alecgorge.minecraft.jsonapi.util.RecursiveDirLister;
-import com.alecgorge.minecraft.permissions.PermissionWrapper;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.logging.Logger;
 
 public class APIWrapperMethods implements JSONAPIMethodProvider {
 	private Logger outLog = JSONAPI.instance.outLog;
@@ -420,18 +404,6 @@ public class APIWrapperMethods implements JSONAPIMethodProvider {
 		}
 	}
 
-	public List<String> getPluginFiles(String pluginName) {
-		try {
-			File dir = Server.getPluginManager().getPlugin(pluginName).getDataFolder();
-			RecursiveDirLister d = new RecursiveDirLister(dir);
-
-			return d.getFileListing();
-		} catch (Exception e) {
-			// e.printStackTrace();
-			return new ArrayList<String>();
-		}
-	}
-
 	@API_Method(namespace = "", name="polyfill_getPluginVersion")
 	public String get345version(String name) {
 		return "3.6.7"; // needed because of faulty Adminium 2.2.1 version checking
@@ -633,222 +605,6 @@ public class APIWrapperMethods implements JSONAPIMethodProvider {
 		runCommand(new String[] { obj, obj2, obj3, obj4, obj5, obj6, obj7, obj8, obj9 });
 	}
 
-	public Map<String, String> getPropertiesFile(String fileName) throws Exception {
-		if ((new File(fileName + ".properties")).exists()) {
-			PropertiesFile p = new PropertiesFile(fileName + ".properties");
-			return p.returnMap();
-		} else {
-			throw new FileNotFoundException(fileName + ".properties was not found");
-		}
-	}
-	
-	public String createFile(String path) throws IOException {
-		File f = new File(path);
-		if(!f.exists()) {
-			f.createNewFile();
-		}
-		return path;
-	}
-	
-	public String createFolder(String path) throws IOException {
-		File f = new File(path);
-		if(!f.exists()) {
-			f.mkdirs();
-		}
-		return path;
-	}
-
-	public String getFileContents(String fileName) throws APIException {
-		if ((new File(fileName)).exists()) {
-			FileInputStream stream = null;
-			try {
-				stream = new FileInputStream(new File(fileName));
-				FileChannel fc = stream.getChannel();
-				MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
-				/* Instead of using default, pass in a decoder. */
-				return Charset.forName("UTF-8").decode(bb).toString();
-			} catch (Exception e) {
-				throw new APIException(fileName + " could not have its files extracte!");
-			} finally {
-				try {
-					stream.close();
-				} catch (Exception e) {
-					throw new APIException(fileName + " could not be closed!");
-				}
-			}
-		} else {
-			throw new APIException(fileName + " doesn't exist!");
-		}
-	}
-
-	public boolean deleteFileOrFolder(String fileName) {
-		File f;
-		if ((f = new File(fileName)).exists()) {
-			try {
-				if(f.isDirectory()) {
-					return deleteDirectory(f);
-				}
-				else {
-					return f.delete();
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-				return false;
-			}
-		} else {
-			return false;
-		}
-	}
-	
-	private boolean deleteDirectory(File directory) {
-		if (directory.exists()){
-			File[] files = directory.listFiles();
-			
-			if (files != null){
-				for (int i=0; i<files.length; i++) {
-					if (files[i].isDirectory()) {
-						deleteDirectory(files[i]);
-					}
-					else {
-						files[i].delete();
-					}
-				}
-			}
-		}
-		
-		return directory.delete();
-	}
-
-	public boolean renameFileOrFolder(String oldName, String newName) {
-		File f;
-		if ((f = new File(oldName)).exists()) {
-			try {
-				return f.renameTo(new File(newName));
-			} catch (Exception e) {
-				e.printStackTrace();
-				return false;
-			}
-		} else {
-			return false;
-		}
-	}
-
-	public String getFileBinaryBase64(String fileName) throws APIException {
-		if ((new File(fileName)).exists()) {
-			FileInputStream stream = null;
-			try {
-				stream = new FileInputStream(new File(fileName));
-				FileChannel fc = stream.getChannel();
-				MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
-				/* Instead of using default, pass in a decoder. */
-				byte[] b = new byte[bb.remaining()];
-				bb.get(b);
-
-				return Base64.encodeBytes(b);
-			} catch (Exception e) {
-				throw new APIException(fileName + " could not have its files extracte!");
-			} finally {
-				try {
-					stream.close();
-				} catch (Exception e) {
-					throw new APIException(fileName + " could not be closed!");
-				}
-			}
-		} else {
-			throw new APIException(fileName + " doesn't exist!");
-		}
-	}
-
-	public boolean setFileBinaryBase64(String fileName, String base64) throws APIException {
-		FileOutputStream stream = null;
-		try {
-			File f = new File(fileName);
-
-			f.createNewFile();
-
-			stream = new FileOutputStream(f);
-			stream.write(Base64.decode(base64));
-			try {
-				stream.close();
-			} catch (IOException e) {
-				throw new APIException(fileName + " could not be closed!");
-			}
-		} catch (Exception e) {
-			throw new APIException(fileName + " could not have its files extracte!");
-		} finally {
-			try {
-				stream.flush();
-				stream.close();
-			} catch (Exception e) {
-				throw new APIException(fileName + " could not be closed!");
-			}
-		}
-		return true;
-	}
-
-	public boolean setFileContents(String fileName, String contents) throws APIException {
-		FileOutputStream stream = null;
-		try {
-			File f = new File(fileName);
-
-			f.createNewFile();
-
-			stream = new FileOutputStream(f);
-			stream.write(contents.getBytes(Charset.forName("UTF-8")));
-			try {
-				stream.flush();
-				stream.close();
-			} catch (IOException e) {
-				throw new APIException(fileName + " could not be closed!");
-			}
-		} catch (IOException e) {
-			throw new APIException(fileName + " could not be written to!");
-		}
-		return true;
-	}
-
-	public boolean appendFileContents(String fileName, String contents) throws APIException {
-		FileOutputStream stream = null;
-		try {
-			File f = new File(fileName);
-
-			f.createNewFile();
-
-			stream = new FileOutputStream(f, true);
-			stream.write(contents.getBytes(Charset.forName("UTF-8")));
-			try {
-				stream.flush();
-				stream.close();
-			} catch (IOException e) {
-				throw new APIException(fileName + " could not be closed!");
-			}
-		} catch (IOException e) {
-			throw new APIException(fileName + " could not be written to!");
-		}
-		return true;
-	}
-
-	public boolean editPropertiesFile(String fileName, String type, String key, String value) throws FileNotFoundException {
-		if ((new File(fileName + ".properties")).exists()) {
-			PropertiesFile p = new PropertiesFile(fileName + ".properties");
-			if (type.toLowerCase().equals("boolean")) {
-				p.setBoolean(key, Boolean.valueOf(value.toString()));
-			} else if (type.toLowerCase().equals("long")) {
-				p.setLong(key, Long.valueOf(value.toString()));
-			} else if (type.toLowerCase().equals("int")) {
-				p.setInt(key, Integer.valueOf(value.toString()));
-			} else if (type.toLowerCase().equals("string")) {
-				p.setString(key, value.toString());
-			} else if (type.toLowerCase().equals("double")) {
-				p.setDouble(key, Double.valueOf(value.toString()));
-			}
-			p.save();
-			return true;
-		} else {
-			throw new FileNotFoundException(fileName + ".properties was not found");
-		}
-	}
-
 	public boolean setPlayerLevel(String player, int level) {
 		Player p = getPlayerExact(player);
 		p.setLevel(level);
@@ -950,30 +706,6 @@ public class APIWrapperMethods implements JSONAPIMethodProvider {
 	}
 
 	// end RTK methods
-
-	public List<String> getDirectory(String path) {
-		try {
-			File dir = new File(path);
-			RecursiveDirLister d = new RecursiveDirLister(dir);
-
-			return d.getFileListing();
-		} catch (Exception e) {
-			// e.printStackTrace();
-			return new ArrayList<String>();
-		}
-	}
-
-	public List<String> getSingleDirectory(String path) {
-		try {
-			File dir = new File(path);
-			RecursiveDirLister d = new RecursiveDirLister(dir);
-
-			return d.getSingleFileListing();
-		} catch (Exception e) {
-			// e.printStackTrace();
-			return new ArrayList<String>();
-		}
-	}
 
 	public void setBlockData(String w, int x, int y, int z, int data) {
 		Server.getWorld(w).getBlockAt(x, y, z).setData((byte) data);
