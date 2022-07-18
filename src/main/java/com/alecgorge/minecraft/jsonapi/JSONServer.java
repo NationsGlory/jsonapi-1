@@ -242,11 +242,7 @@ public class JSONServer extends NanoHTTPD {
 			
 			return r;
 		}
-		
-		if(uri.startsWith("/api/2/") || inst.useGroups) {
-			APIv2Handler handler = new APIv2Handler(uri, method, header, parms, this);
-			return handler.serve();
-		}
+
 		String callback = parms.getProperty("callback");
 		setLastRequestParms(parms);
 

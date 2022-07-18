@@ -10,7 +10,6 @@ import com.alecgorge.minecraft.jsonapi.api.JSONAPIStreamMessage;
 import com.alecgorge.minecraft.jsonapi.chat.BukkitForgeRealisticChat;
 import com.alecgorge.minecraft.jsonapi.chat.BukkitRealisticChat;
 import com.alecgorge.minecraft.jsonapi.chat.IRealisticChat;
-import com.alecgorge.minecraft.jsonapi.util.RecursiveDirLister;
 import com.alecgorge.minecraft.permissions.PermissionWrapper;
 import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.economy.Economy;
